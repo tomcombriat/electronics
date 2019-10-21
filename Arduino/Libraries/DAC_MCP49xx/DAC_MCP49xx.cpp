@@ -36,25 +36,25 @@ DAC_MCP49xx::DAC_MCP49xx(DAC_MCP49xx::Model _model, int _ss_pin, int _LDAC_pin) 
   this->ss_pin = _ss_pin;
   this->LDAC_pin = _LDAC_pin;
 
- /* 
-  * MCP49x1 models are single DACs, while MCP49x2 are dual.
-  * Apart from that, only the bit width differ between the models.
-  */
+  /* 
+   * MCP49x1 models are single DACs, while MCP49x2 are dual.
+   * Apart from that, only the bit width differ between the models.
+   */
   switch (_model) {
-    case MCP4901:
-    case MCP4902:
-      bitwidth = 8;
-      break;
-    case MCP4911:
-    case MCP4912:
-      bitwidth = 10;
-      break;
-    case MCP4921:
-    case MCP4922:
-      bitwidth = 12;
-      break;
-    default:
-      bitwidth = 0;
+  case MCP4901:
+  case MCP4902:
+    bitwidth = 8;
+    break;
+  case MCP4911:
+  case MCP4912:
+    bitwidth = 10;
+    break;
+  case MCP4921:
+  case MCP4922:
+    bitwidth = 12;
+    break;
+  default:
+    bitwidth = 0;
   }
 
   pinMode(ss_pin, OUTPUT); // Ensure that SS is set to SPI master mode
@@ -71,12 +71,12 @@ DAC_MCP49xx::DAC_MCP49xx(DAC_MCP49xx::Model _model, int _ss_pin, int _LDAC_pin) 
 
 void DAC_MCP49xx::setBuffer(boolean _buffer)
 {
-    this->bufferVref = _buffer;
+  this->bufferVref = _buffer;
 }
 
 void DAC_MCP49xx::setPortWrite(boolean _port_write)
 {
-    this->port_write = _port_write; 
+  this->port_write = _port_write; 
 }
 
 
@@ -113,18 +113,18 @@ boolean DAC_MCP49xx::setGain(int _gain) {
 // main Arduino clock divided by the divider selected here.
 boolean DAC_MCP49xx::setSPIDivider(int _div) {
   switch (_div) {
-    case SPI_CLOCK_DIV2:
-    case SPI_CLOCK_DIV4:
-    case SPI_CLOCK_DIV8:
-    case SPI_CLOCK_DIV16:
-    case SPI_CLOCK_DIV32:
-    case SPI_CLOCK_DIV64:
-    case SPI_CLOCK_DIV128:
-      spi_divider = _div;
-      SPI.setClockDivider(_div);
-      return true;
-    default:
-      return false;
+  case SPI_CLOCK_DIV2:
+  case SPI_CLOCK_DIV4:
+  case SPI_CLOCK_DIV8:
+  case SPI_CLOCK_DIV16:
+  case SPI_CLOCK_DIV32:
+  case SPI_CLOCK_DIV64:
+  case SPI_CLOCK_DIV128:
+    spi_divider = _div;
+    SPI.setClockDivider(_div);
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -133,11 +133,15 @@ boolean DAC_MCP49xx::setSPIDivider(int _div) {
 // Time to settle on an output value increases from ~4.5 µs to ~10 µs, though (according to the datasheet).
 void DAC_MCP49xx::shutdown(void) {
   // Drive chip select low
+#ifdef AVR
   if (this->port_write)
     PORTB &= 0xfb; // Clear PORTB pin 2 = arduino pin 10
   else
     digitalWrite(ss_pin, LOW);
-
+#else
+  digitalWrite(ss_pin, LOW);
+#endif
+  
   // Sending all zeroes should work, too, but I'm unsure whether there might be a switching time
   // between buffer and gain modes, so we'll send them so that they have the same value once we
   // exit shutdown.
@@ -146,10 +150,14 @@ void DAC_MCP49xx::shutdown(void) {
   SPI.transfer(out & 0xff);
 
   // Return chip select to high
+#ifdef AVR
   if (this->port_write)
     PORTB |= (1 << 2); // set PORTB pin 2 = arduino pin 10
   else
     digitalWrite(ss_pin, HIGH);
+#else
+  digitalWrite(ss_pin, HIGH);
+#endif
 }
 
 // Private function.
@@ -164,10 +172,14 @@ void DAC_MCP49xx::_output(unsigned short data, Channel chan) {
     data &= 0xff;
 
   // Drive chip select low
+#ifdef AVR
   if (this->port_write)
     PORTB &= 0xfb; // Clear PORTB pin 2 = arduino pin 10
   else
-    digitalWrite(ss_pin, LOW); 
+    digitalWrite(ss_pin, LOW);
+#else
+  digitalWrite(ss_pin, LOW);
+#endif
 
   // bit 15: 0 for DAC A, 1 for DAC B. (Always 0 for MCP49x1.)
   // bit 14: buffer VREF?
@@ -181,10 +193,15 @@ void DAC_MCP49xx::_output(unsigned short data, Channel chan) {
   SPI.transfer(out & 0xff);
 
   // Return chip select to high
+#ifdef AVR
   if (this->port_write)
     PORTB |= (1 << 2); // set PORTB pin 2 = arduino pin 10
   else
     digitalWrite(ss_pin, HIGH);
+#else
+  digitalWrite(ss_pin, HIGH);
+#endif
+  
 }
 
 // For MCP49x1
@@ -235,7 +252,7 @@ void DAC_MCP49xx::latch(void) {
     return;
 
   // We then need to hold LDAC low for at least 100 ns, i.e ~2 clock cycles.
-
+#ifdef AVR
   if (this->port_write) {
     // This gives ~180 ns (three clock cycles, most of which is spent low) of 
     // low time on a Uno R3 (16 MHz), measured on a scope to make sure
@@ -250,4 +267,8 @@ void DAC_MCP49xx::latch(void) {
     digitalWrite(LDAC_pin, LOW);
     digitalWrite(LDAC_pin, HIGH);
   }
+#else
+  digitalWrite(LDAC_pin, LOW);
+  digitalWrite(LDAC_pin, HIGH);
+#endif
 }

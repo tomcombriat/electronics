@@ -1,8 +1,12 @@
 #ifndef _DAC_MCP49xx_H
 #define _DAC_MCP49xx_H
 
+//#define AVR
+
 #include <SPI.h>
+#ifdef AVR
 #include <Arduino.h>
+#endif
 #include <inttypes.h>
 
 #ifndef _SPI_H_INCLUDED
